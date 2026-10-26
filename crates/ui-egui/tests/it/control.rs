@@ -1525,7 +1525,7 @@ fn home_and_combine_suppress_inspector_without_forgetting_layout_or_choice() {
 #[test]
 fn malformed_docking_settings_preserve_other_preferences() {
     let mut app = PdfCraftApp::new();
-    app.restore(r#"{"docking":{"layout":{"root":null,"floating":[]},"hidden":[]},"default_mode":"edit","flatten_fill_sign":true}"#);
+    app.restore(r#"{"docking_v2":{"layout":{"root":null,"floating":[]},"hidden":[]},"default_mode":"edit","flatten_fill_sign":true}"#);
     assert_eq!(app.default_mode, pdfcraft_ui_egui::Mode::Edit);
     app.docking.validate().unwrap();
     let saved: Value = serde_json::from_str(&app.persist()).unwrap();
@@ -1543,13 +1543,13 @@ fn rail_reveals_its_remembered_inactive_inspector_then_closes_the_visible_panel(
     h.run_steps(3);
     let document = ok(&mut h, &c, "ui.state", json!({}))["documents"].clone();
     let mut preferences: Value = serde_json::from_str(&h.state().persist()).unwrap();
-    preferences.as_object_mut().unwrap().remove("docking");
+    preferences.as_object_mut().unwrap().remove("docking_v2");
     assert!(h.query_by_label("This document has no bookmarks.").is_none());
     h.get_by_role_and_label(egui::accesskit::Role::Button, "Bookmarks").click();
     h.run_steps(4);
     h.get_by_label("This document has no bookmarks.");
     let mut after: Value = serde_json::from_str(&h.state().persist()).unwrap();
-    after.as_object_mut().unwrap().remove("docking");
+    after.as_object_mut().unwrap().remove("docking_v2");
     assert_eq!(after, preferences, "revealing a group member only changes layout activation");
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"], document);
     h.get_by_role_and_label(egui::accesskit::Role::Button, "Bookmarks").click();

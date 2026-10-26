@@ -9,7 +9,7 @@ use pdfcraft_render::DocInfo;
 
 use crate::canvas::{DocView, PageXform};
 
-const BLUE: Color32 = Color32::from_rgb(0x14, 0x73, 0xE6);
+const BLUE: Color32 = Color32::from_rgb(0x62, 0x8E, 0xCB);
 
 #[derive(Default)]
 pub(crate) struct ObjectSelection {

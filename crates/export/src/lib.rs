@@ -11,9 +11,11 @@
 use std::collections::HashMap;
 
 mod pptx;
+mod xlsx;
 mod zip;
 
 pub use pptx::pptx;
+pub use xlsx::xlsx;
 pub use zip::Zip;
 
 /// A paragraph of a page.

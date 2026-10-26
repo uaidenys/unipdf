@@ -15,7 +15,7 @@ use crate::comments;
 use crate::theme;
 use crate::widgets;
 
-const SELECT_BLUE: Color32 = Color32::from_rgb(0x14, 0x73, 0xE6);
+const SELECT_BLUE: Color32 = Color32::from_rgb(0x62, 0x8E, 0xCB);
 /// Acrobat's field fill in Prepare Form (light blue).
 pub(crate) const FIELD_FILL: Color32 = Color32::from_rgba_premultiplied(0x1B, 0x34, 0x54, 0x59);
 
@@ -710,7 +710,7 @@ pub(crate) fn after_refresh(view: &mut DocView, form: &[FormField]) {
 
 // ───────────────────────────────────────────────────────────────────────── Field Properties
 
-impl crate::PdfCraftApp {
+impl crate::UniPDFApp {
     /// Open Field Properties for a field of the active document.
     pub fn open_field_props(&mut self, name: &str, widget: usize) {
         let Some((index, id)) = self.active_ids() else { return };

@@ -141,6 +141,7 @@ pub enum OfficeFormat {
     Pptx,
     Html,
     Rtf,
+    Xlsx,
 }
 
 impl OfficeFormat {
@@ -150,6 +151,7 @@ impl OfficeFormat {
             OfficeFormat::Pptx => "pptx",
             OfficeFormat::Html => "html",
             OfficeFormat::Rtf => "rtf",
+            OfficeFormat::Xlsx => "xlsx",
         }
     }
 
@@ -159,6 +161,7 @@ impl OfficeFormat {
             "pptx" => Some(OfficeFormat::Pptx),
             "html" | "htm" => Some(OfficeFormat::Html),
             "rtf" => Some(OfficeFormat::Rtf),
+            "xlsx" => Some(OfficeFormat::Xlsx),
             _ => None,
         }
     }
@@ -280,6 +283,7 @@ impl crate::Document {
             OfficeFormat::Pptx => pdfcraft_export::pptx(&pages, &title),
             OfficeFormat::Html => pdfcraft_export::html(&pages, &title).into_bytes(),
             OfficeFormat::Rtf => pdfcraft_export::rtf(&pages).into_bytes(),
+            OfficeFormat::Xlsx => pdfcraft_export::xlsx(&pages).unwrap_or_default(),
         };
         OfficeExport { bytes, truncated_pages }
     }

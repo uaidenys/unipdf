@@ -941,7 +941,7 @@ mod tests {
     #[test]
     fn missing_ocr_models_messages_are_translated() {
         let error = pdfcraft_engine::ocr::OcrError::NoModels.to_string();
-        let notice = "Text recognition isn't installed: its model files are missing. Reinstall PdfCraft, or set PDFCRAFT_MODELS to the folder that holds them.";
+        let notice = "Text recognition isn't installed: its model files are missing. Reinstall UniPDF, or set PDFCRAFT_MODELS to the folder that holds them.";
         assert!(include_str!("../ocr_ui.rs").contains(notice), "keep in step with ocr_ui.rs");
         for code in ["bg", "cs", "de", "es", "fr", "hu", "ja", "ru", "te", "uk", "zh-hans", "zh-hant"] {
             let lang = Lang::from_code(code).expect("registered");
@@ -1242,13 +1242,13 @@ mod tests {
 
     #[test]
     fn language_persists_and_invalid_input_keeps_current_language() {
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         assert_eq!(app.language, AUTO);
         app.set_option("language", "JA").unwrap();
         assert_eq!(app.language, "ja");
         assert!(app.set_option("language", "xx").is_err());
         assert_eq!(app.language, "ja");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "ja");
         restored.restore(r#"{"language":"xx"}"#);
@@ -1256,7 +1256,7 @@ mod tests {
         app.set_option("language", AUTO).unwrap();
         assert_eq!(app.language, AUTO);
         // Settings written before the system-locale default (no key) follow the system.
-        let mut legacy = crate::PdfCraftApp::default();
+        let mut legacy = crate::UniPDFApp::default();
         legacy.restore("{}");
         assert_eq!(legacy.language, AUTO);
     }
@@ -1274,10 +1274,10 @@ mod tests {
         assert_eq!(tr(pt, "Save as…"), "Salvar como…");
         assert_eq!(tr(pt, "Arquivo do usuário.pdf"), "Arquivo do usuário.pdf");
         assert_eq!((0..=3).map(|n| (pt.0.plural)(n)).collect::<Vec<_>>(), [0, 0, 1, 1]);
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "pt-br").unwrap();
         assert_eq!(app.language, "pt-br");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "pt-br");
     }
@@ -1391,10 +1391,10 @@ mod tests {
         assert_eq!(trn(es, 3, "{n} page", "{n} pages"), "3 páginas");
         // The signature pad's Type is the verb (type your name), not the noun "Tipo".
         assert_eq!(tr_ctx(es, "signature pad", "Type"), "Escribir");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "es").unwrap();
         assert_eq!(app.language, "es");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "es");
     }
@@ -1495,10 +1495,10 @@ mod tests {
         assert_eq!(tr(te, "నివేదిక.pdf"), "నివేదిక.pdf");
         assert_eq!(trn(te, 1, "{n} page", "{n} pages"), "1 పేజీ");
         assert_eq!(trn(te, 3, "{n} page", "{n} pages"), "3 పేజీలు");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "te").unwrap();
         assert_eq!(app.language, "te");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "te");
     }
@@ -1625,11 +1625,11 @@ mod tests {
             assert!(!e.translation.contains("..."), "use … rather than three dots: {:?}", e.translation);
             assert_eq!(edges(&e.translation), edges(&e.source), "stray whitespace: {:?}", e.translation);
         }
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "cs").unwrap();
         assert!(app.set_option("language", "cz").is_err());
         assert_eq!(app.language, "cs");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "cs");
     }
@@ -1806,11 +1806,11 @@ mod tests {
             assert_eq!(e.source.starts_with(' '), e.translation.starts_with(' '), "leading space mismatch: {:?}", e.translation);
             assert_eq!(e.source.ends_with(' '), e.translation.ends_with(' '), "trailing space mismatch: {:?}", e.translation);
         }
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "tr").unwrap();
         assert!(app.set_option("language", "tu").is_err());
         assert_eq!(app.language, "tr");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "tr");
     }
@@ -2043,10 +2043,10 @@ mod tests {
         assert_eq!(trn(fr, 2, "{n} page", "{n} pages"), "2 pages");
         assert_eq!(trn(fr, 1, "{n} field", "{n} fields"), "1 champ");
         assert_eq!(trn(fr, 2, "{n} field", "{n} fields"), "2 champs");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "fr").unwrap();
         assert_eq!(app.language, "fr");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "fr");
     }
@@ -2149,10 +2149,10 @@ mod tests {
         assert_eq!(trn(de, 2, "{n} page", "{n} pages"), "2 Seiten");
         assert_eq!(trn(de, 1, "{n} field", "{n} fields"), "1 Feld");
         assert_eq!(trn(de, 2, "{n} field", "{n} fields"), "2 Felder");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "de").unwrap();
         assert_eq!(app.language, "de");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "de");
     }
@@ -2295,10 +2295,10 @@ mod tests {
         assert_eq!(trn(ru, 1, "{n} field", "{n} fields"), "1 поле");
         assert_eq!(trn(ru, 2, "{n} field", "{n} fields"), "2 поля");
         assert_eq!(trn(ru, 5, "{n} field", "{n} fields"), "5 полей");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "ru").unwrap();
         assert_eq!(app.language, "ru");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "ru");
     }
@@ -2407,10 +2407,10 @@ mod tests {
             fmt(tr(fi, "{month} {day}, {y}"), &[("month", tr_ctx(fi, "calendar date", "October")), ("day", "14"), ("y", "2026")]),
             "14. lokakuuta 2026"
         );
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "FI").unwrap();
         assert_eq!(app.language, "fi");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "fi");
     }
@@ -2497,10 +2497,10 @@ mod tests {
         assert_eq!(trn(lt, 22, "{n} page", "{n} pages"), "22 puslapiai");
         assert_eq!(trn(lt, 12, "{n} object selected", "{n} objects selected"), "Pažymėta 12 objektų");
         assert_eq!(trn(lt, 22, "{n} object selected", "{n} objects selected"), "Pažymėti 22 objektai");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "LT").unwrap();
         assert_eq!(app.language, "lt");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "lt");
         assert!(restored.set_option("language", "xx").is_err());
@@ -2521,10 +2521,10 @@ mod tests {
         assert_eq!((0..=3).map(|n| (nb.0.plural)(n)).collect::<Vec<_>>(), [1, 0, 1, 1]);
         assert_eq!(tr(nb, "Allow"), "Tillat");
         assert_eq!(tr_ctx(nb, "key", "Space"), "Mellomrom");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "NB").unwrap();
         assert_eq!(app.language, "nb");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "nb");
     }
@@ -2699,7 +2699,7 @@ mod tests {
             "Virš kiekvieno žodžio prideda nematomą tekstą; puslapio vaizdas nesikeičia"
         );
         assert!(
-            tr(lt, "The fonts PdfCraft writes with can't draw “{c}” ({code}), so it shows as ? in every PDF viewer. The text is saved.")
+            tr(lt, "The fonts UniPDF writes with can't draw “{c}” ({code}), so it shows as ? in every PDF viewer. The text is saved.")
                 .contains("visose PDF žiūryklėse")
         );
     }
@@ -2725,10 +2725,10 @@ mod tests {
             assert_eq!(trn(vi, n, "{n} page", "{n} pages"), format!("{n} trang"));
             assert_eq!(trn(vi, n, "{n} field", "{n} fields"), format!("{n} trường"));
         }
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "vi").unwrap();
         assert_eq!(app.language, "vi");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "vi");
         assert!(restored.set_option("language", "xx").is_err());
@@ -2999,10 +2999,10 @@ mod tests {
         assert_eq!((0..=3).map(|n| (ca.0.plural)(n)).collect::<Vec<_>>(), [1, 0, 1, 1]);
         assert_eq!(trn(ca, 1, "{n} page", "{n} pages"), "1 pàgina");
         assert_eq!(trn(ca, 3, "{n} page", "{n} pages"), "3 pàgines");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "CA").unwrap();
         assert_eq!(app.language, "ca");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "ca");
         assert!(restored.set_option("language", "xx").is_err());
@@ -3083,10 +3083,10 @@ mod tests {
         assert_eq!(tr_ctx(sl, "action wizard", "Start"), "Začni");
         // one (1), two (2), few (3, 4), other (0, 5+)
         assert_eq!((0..=5).map(|n| (sl.0.plural)(n)).collect::<Vec<_>>(), [3, 0, 1, 2, 2, 3]);
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "SL").unwrap();
         assert_eq!(app.language, "sl");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "sl");
         assert!(restored.set_option("language", "xx").is_err());
@@ -3108,10 +3108,10 @@ mod tests {
         assert_eq!(trn(sq, 1, "{n} page", "{n} pages"), "1 faqe");
         assert_eq!(trn(sq, 0, "{n} page", "{n} pages"), "0 faqe");
         assert_eq!(trn(sq, 5, "{n} page", "{n} pages"), "5 faqe");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "SQ").unwrap();
         assert_eq!(app.language, "sq");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "sq");
         assert!(restored.set_option("language", "xx").is_err());
@@ -3272,16 +3272,16 @@ mod tests {
             assert_eq!(trn(id, n, "{n} field", "{n} fields"), format!("{n} kolom"));
             assert_eq!(trn(vi, n, "{n} field", "{n} fields"), format!("{n} trường"));
         }
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "ID").unwrap();
         assert_eq!(app.language, "id");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "id");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "vi").unwrap();
         assert_eq!(app.language, "vi");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "vi");
         assert!(restored.set_option("language", "xx").is_err());
@@ -3393,10 +3393,10 @@ mod tests {
         // The broken-line regression: a `\n` escape stays one catalog line.
         assert_eq!(tr(ko, "This page couldn't be displayed.\n{e}"), "이 페이지를 표시할 수 없습니다.\n{e}");
         for code in ["hi", "ko"] {
-            let mut app = crate::PdfCraftApp::default();
+            let mut app = crate::UniPDFApp::default();
             app.set_option("language", &code.to_uppercase()).unwrap();
             assert_eq!(app.language, code);
-            let mut restored = crate::PdfCraftApp::default();
+            let mut restored = crate::UniPDFApp::default();
             restored.restore(&app.persist());
             assert_eq!(restored.language, code);
             assert!(restored.set_option("language", "xx").is_err());
@@ -3523,10 +3523,10 @@ mod tests {
         assert_eq!(trn(bg, 21, "{n} page", "{n} pages"), "21 страници");
         assert_eq!(trn(bg, 1, "{n} field", "{n} fields"), "1 поле");
         assert_eq!(trn(bg, 5, "{n} field", "{n} fields"), "5 полета");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "bg").unwrap();
         assert_eq!(app.language, "bg");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "bg");
     }
@@ -3631,10 +3631,10 @@ mod tests {
         assert_eq!(trn(hu, 2, "{n} page", "{n} pages"), "2 oldal");
         assert_eq!(trn(hu, 1, "{n} field", "{n} fields"), "1 mező");
         assert_eq!(trn(hu, 5, "{n} field", "{n} fields"), "5 mező");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "hu").unwrap();
         assert_eq!(app.language, "hu");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "hu");
     }
@@ -3740,10 +3740,10 @@ mod tests {
         assert_eq!(tr_ctx(uk, "action wizard", "Start"), "Почати");
         assert_eq!(tr(uk, "Subject"), "Тема");
         assert_eq!(tr_ctx(uk, "certificate", "Subject"), "Власник сертифіката");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "UK").unwrap();
         assert_eq!(app.language, "uk");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "uk");
         assert!(restored.set_option("language", "xx").is_err());
@@ -4066,10 +4066,10 @@ mod tests {
         assert_eq!(tr_ctx(ar, "certificate", "Subject"), "الشهادة صاحب");
         // Unknown strings and user text are never reordered by a lookup.
         assert_eq!(tr(ar, "تقرير نهائي {n}.pdf"), "تقرير نهائي {n}.pdf");
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::UniPDFApp::default();
         app.set_option("language", "AR").unwrap();
         assert_eq!(app.language, "ar");
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::UniPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, "ar");
         assert!(restored.set_option("language", "xx").is_err());
@@ -4084,7 +4084,7 @@ mod tests {
         // "حفظ باسم…" as typed; the ellipsis ends the phrase on the left.
         assert_eq!(tr(ar, "Save as…"), "…باسم حفظ");
         // Latin names keep their own direction inside the phrase.
-        assert_eq!(tr(ar, "About PdfCraft"), "PdfCraft حول");
+        assert_eq!(tr(ar, "About UniPDF"), "UniPDF حول");
         // A caption's colon stays beside the widget on its right.
         assert_eq!(tr(ar, "Name:"), "الاسم:");
         assert_eq!(tr(ar, "Issued by: "), "عن صادرة: ");

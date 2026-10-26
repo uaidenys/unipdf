@@ -17,7 +17,7 @@ use crate::theme::{self, Tokens};
 use crate::{icons, widgets};
 
 /// Accent bar of the selected card (11-visual-spec §3: `#0165DD`).
-const CARD_ACCENT: Color32 = Color32::from_rgb(0x01, 0x65, 0xDD);
+const CARD_ACCENT: Color32 = Color32::from_rgb(0x39, 0x58, 0x86);
 
 /// Reader-friendly names for annotation subtypes (the PDF names are shown in tooltips).
 pub fn subtype_label(s: &str) -> &str {

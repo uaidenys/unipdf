@@ -55,7 +55,7 @@ pub(crate) fn page_input(
         ] {
             painter.rect_filled(band, CornerRadius::ZERO, Color32::from_black_alpha(70));
         }
-        painter.rect_stroke(r, CornerRadius::ZERO, Stroke::new(1.0, Color32::from_rgb(0x14, 0x73, 0xE6)), egui::StrokeKind::Middle);
+        painter.rect_stroke(r, CornerRadius::ZERO, Stroke::new(1.0, Color32::from_rgb(0x62, 0x8E, 0xCB)), egui::StrokeKind::Middle);
         if resp.drag_stopped() {
             view.crop_drag = None;
             if r.width() >= 4.0 && r.height() >= 4.0 {

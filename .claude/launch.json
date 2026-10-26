@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "unipdf-web",
+      "runtimeExecutable": "trunk",
+      "runtimeArgs": ["serve", "--config", "apps/pdfcraft-web/Trunk.toml", "--port", "8772"],
+      "port": 8772
+    }
+  ]
+}

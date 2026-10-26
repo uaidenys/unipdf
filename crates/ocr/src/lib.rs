@@ -14,6 +14,9 @@ use std::path::{Path, PathBuf};
 
 pub use pdfcraft_fonts::helvetica_width;
 
+#[cfg(windows)]
+mod windows_ocr;
+
 /// The model files, as named in ATTRIBUTION.toml.
 pub const DETECTION_MODEL: &str = "text-detection.rten";
 pub const RECOGNITION_MODEL: &str = "text-recognition.rten";
@@ -105,7 +108,13 @@ impl Line {
 
 /// A loaded recogniser. Loading takes a moment; keep one and reuse it.
 pub struct Ocr {
-    engine: ocrs::OcrEngine,
+    engine: Engine,
+}
+
+enum Engine {
+    Ocrs(Box<ocrs::OcrEngine>),
+    #[cfg(windows)]
+    Windows(windows::Media::Ocr::OcrEngine),
 }
 
 impl Ocr {
@@ -118,11 +127,16 @@ impl Ocr {
             ..Default::default()
         };
         let engine = ocrs::OcrEngine::new(params).map_err(|e| OcrError::Load("ocr engine".into(), e.to_string()))?;
-        Ok(Ocr { engine })
+        Ok(Ocr { engine: Engine::Ocrs(Box::new(engine)) })
     }
 
     /// Load the models found by [`Models::find`].
+    /// UniPDF: on Windows, its own OCR first (Portuguese with accents, nothing to download).
     pub fn find() -> Result<Ocr, OcrError> {
+        #[cfg(windows)]
+        if let Some(e) = windows_ocr::engine() {
+            return Ok(Ocr { engine: Engine::Windows(e) });
+        }
         Self::load(&Models::find().ok_or(OcrError::NoModels)?)
     }
 
@@ -131,6 +145,11 @@ impl Ocr {
         if width == 0 || height == 0 || pixels.is_empty() {
             return Err(OcrError::EmptyImage);
         }
+        let engine = match &self.engine {
+            Engine::Ocrs(e) => e,
+            #[cfg(windows)]
+            Engine::Windows(e) => return windows_ocr::recognize(e, pixels, width, height),
+        };
         // ocrs wants 1 or 3 channels.
         let rgb: std::borrow::Cow<[u8]> = if pixels.len() == (width * height * 4) as usize {
             pixels.as_chunks::<4>().0.iter().flat_map(|p| [p[0], p[1], p[2]]).collect::<Vec<u8>>().into()
@@ -139,10 +158,10 @@ impl Ocr {
         };
         let err = |e: &dyn std::fmt::Display| OcrError::Recognize(e.to_string());
         let source = ocrs::ImageSource::from_bytes(&rgb, (width, height)).map_err(|e| err(&e))?;
-        let input = self.engine.prepare_input(source).map_err(|e| err(&e))?;
-        let found = self.engine.detect_words(&input).map_err(|e| err(&e))?;
-        let lines = self.engine.find_text_lines(&input, &found);
-        let read = self.engine.recognize_text(&input, &lines).map_err(|e| err(&e))?;
+        let input = engine.prepare_input(source).map_err(|e| err(&e))?;
+        let found = engine.detect_words(&input).map_err(|e| err(&e))?;
+        let lines = engine.find_text_lines(&input, &found);
+        let read = engine.recognize_text(&input, &lines).map_err(|e| err(&e))?;
         use ocrs::TextItem;
         Ok(read
             .into_iter()

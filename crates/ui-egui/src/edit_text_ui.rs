@@ -13,7 +13,7 @@ use pdfcraft_render::DocInfo;
 
 use crate::canvas::{DocView, PageXform};
 
-const ACCENT: Color32 = Color32::from_rgb(0x14, 0x73, 0xE6);
+const ACCENT: Color32 = Color32::from_rgb(0x62, 0x8E, 0xCB);
 
 #[derive(Clone, Copy, PartialEq)]
 enum TextTarget {
@@ -1774,8 +1774,8 @@ mod tests {
     }
 
     /// An app with one text document open, and an editor on its first paragraph.
-    fn preview_app() -> (crate::PdfCraftApp, LineEditor) {
-        let mut app = crate::PdfCraftApp::new();
+    fn preview_app() -> (crate::UniPDFApp, LineEditor) {
+        let mut app = crate::UniPDFApp::new();
         let bytes = app.session.create_from_text("Preview", "Preview text").unwrap();
         app.open_bytes("preview.pdf", None, bytes.as_ref().clone()).unwrap();
         let doc = app.session.get(app.views[0].id).unwrap();

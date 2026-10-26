@@ -16,9 +16,9 @@ use pdfcraft_engine::{DocId, Edit, FormField};
 use pdfcraft_render::PageInfo;
 
 use crate::canvas::PageXform;
-use crate::{Dialog, PdfCraftApp, i18n, theme, widgets};
+use crate::{Dialog, UniPDFApp, i18n, theme, widgets};
 
-const SELECT_BLUE: Color32 = Color32::from_rgb(0x14, 0x73, 0xE6);
+const SELECT_BLUE: Color32 = Color32::from_rgb(0x62, 0x8E, 0xCB);
 const ERROR_RED: Color32 = Color32::from_rgb(0xD1, 0x3B, 0x3B);
 /// A divider can't be dragged to leave a column less than this share of the table, or less than a
 /// quarter of what the two columns it divides have between them when that is smaller.
@@ -134,7 +134,7 @@ impl FieldTableDraft {
 }
 
 /// Show the window while [`Dialog::FieldTable`] is open, and add the table when asked to.
-pub(crate) fn show(app: &mut PdfCraftApp, ctx: &egui::Context) {
+pub(crate) fn show(app: &mut UniPDFApp, ctx: &egui::Context) {
     // The window belongs to one page of one document, while that document is being prepared.
     let active = app.active_ids().map(|(_, id)| id);
     let preparing = app.is_preparing();
@@ -193,7 +193,7 @@ pub(crate) fn show(app: &mut PdfCraftApp, ctx: &egui::Context) {
 }
 
 /// Drop the table being set up, and the dialog with it if it is still the open one.
-fn close(app: &mut PdfCraftApp) {
+fn close(app: &mut UniPDFApp) {
     app.field_table_draft = None;
     if app.dialog == Some(Dialog::FieldTable) {
         app.dialog = None;

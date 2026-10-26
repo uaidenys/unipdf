@@ -8,9 +8,9 @@ use pdfcraft_render::DocInfo;
 
 use crate::canvas::{DocView, PageXform};
 use crate::theme::{self, Tokens};
-use crate::{PdfCraftApp, widgets};
+use crate::{UniPDFApp, widgets};
 
-const LINK_BLUE: Color32 = Color32::from_rgb(0x14, 0x73, 0xE6);
+const LINK_BLUE: Color32 = Color32::from_rgb(0x62, 0x8E, 0xCB);
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LinkView {
@@ -145,7 +145,7 @@ pub(crate) fn keys(ctx: &egui::Context, view: &mut DocView) {
     }
 }
 
-impl PdfCraftApp {
+impl UniPDFApp {
     /// Open Link Properties for a new link area or an existing link.
     pub(crate) fn open_link_props(&mut self, page: usize, rect: Option<[f64; 4]>, index: Option<usize>) {
         let Some((_, id)) = self.active_ids() else { return };

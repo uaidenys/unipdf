@@ -33,7 +33,7 @@ impl Panel {
     fn default_side(self) -> Zone {
         match self {
             Self::Canvas => Zone::Right,
-            Self::Tools => Zone::Left,
+            Self::Tools => Zone::Right,
             Self::Inspector => Zone::Right,
         }
     }
@@ -68,9 +68,9 @@ impl Default for Workspace {
             layout: Layout {
                 root: Some(split(
                     SplitAxis::Horizontal,
-                    SplitSize::FixedFirst(272.0),
-                    tabs(Panel::Tools),
+                    SplitSize::FixedSecond(272.0),
                     split(SplitAxis::Horizontal, SplitSize::FixedSecond(330.0), tabs(Panel::Canvas), tabs(Panel::Inspector)),
+                    tabs(Panel::Tools),
                 )),
                 floating: Vec::new(),
             },
@@ -294,12 +294,12 @@ impl Workspace {
     }
 }
 
-fn sync(workspace: &mut Workspace, app: &crate::PdfCraftApp) -> Result<(), String> {
+fn sync(workspace: &mut Workspace, app: &crate::UniPDFApp) -> Result<(), String> {
     workspace.set_visible(Panel::Tools, app.left_open)?;
     workspace.set_visible(Panel::Inspector, app.right.is_some())
 }
 
-fn drain_reveals(workspace: &mut Workspace, app: &mut crate::PdfCraftApp) {
+fn drain_reveals(workspace: &mut Workspace, app: &mut crate::UniPDFApp) {
     for panel in std::mem::take(&mut app.pending_panel_reveals) {
         if workspace.layout.contains(&panel) {
             let _ = workspace.apply(Action::Activate { panel });
@@ -307,7 +307,7 @@ fn drain_reveals(workspace: &mut Workspace, app: &mut crate::PdfCraftApp) {
     }
 }
 
-fn publish_visibility(app: &mut crate::PdfCraftApp, workspace: &Workspace) {
+fn publish_visibility(app: &mut crate::UniPDFApp, workspace: &Workspace) {
     app.left_open = workspace.layout.contains(&Panel::Tools);
     if !workspace.layout.contains(&Panel::Inspector) {
         if app.right.is_some() {
@@ -318,7 +318,7 @@ fn publish_visibility(app: &mut crate::PdfCraftApp, workspace: &Workspace) {
     }
 }
 
-pub fn command(app: &mut crate::PdfCraftApp, reset: bool, params: &Value) -> Result<Value, String> {
+pub fn command(app: &mut crate::UniPDFApp, reset: bool, params: &Value) -> Result<Value, String> {
     let mut workspace = app.docking.clone();
     if reset {
         workspace = Workspace::default();
@@ -366,7 +366,7 @@ fn saved_split_path(saved: &Layout<Panel>, rendered: &Layout<Panel>, path: &[boo
     None
 }
 
-pub fn show(app: &mut crate::PdfCraftApp, ui: &mut egui::Ui) {
+pub fn show(app: &mut crate::UniPDFApp, ui: &mut egui::Ui) {
     let t = crate::theme::Tokens::get(ui.ctx());
     let mut workspace = std::mem::take(&mut app.docking);
     if let Err(error) = workspace.validate().and_then(|()| sync(&mut workspace, app)) {
@@ -469,17 +469,18 @@ mod tests {
 
     #[test]
     fn tools_side_moves_to_both_edges_and_survives_closed_restore() {
+        // UniPDF abre as ferramentas à direita.
         let mut workspace = Workspace::default();
-        assert!(!workspace.tools_on_right());
-        workspace.set_tools_on_right(true).unwrap();
-        assert!(workspace.tools_on_right());
-        workspace.set_visible(Panel::Tools, false).unwrap();
         assert!(workspace.tools_on_right());
         workspace.set_tools_on_right(false).unwrap();
         assert!(!workspace.tools_on_right());
+        workspace.set_visible(Panel::Tools, false).unwrap();
+        assert!(!workspace.tools_on_right());
+        workspace.set_tools_on_right(true).unwrap();
+        assert!(workspace.tools_on_right());
         assert!(!workspace.layout.contains(&Panel::Tools));
         workspace.set_visible(Panel::Tools, true).unwrap();
-        assert!(!workspace.tools_on_right());
+        assert!(workspace.tools_on_right());
         workspace.validate().unwrap();
     }
 

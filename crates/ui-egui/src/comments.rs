@@ -21,7 +21,7 @@ use crate::theme::{self, Tokens};
 use crate::{QuickTool, icons};
 
 /// Acrobat's selection blue for annotation frames and handles (11-visual-spec §5).
-const SELECT_BLUE: Color32 = Color32::from_rgb(0x14, 0x73, 0xE6);
+const SELECT_BLUE: Color32 = Color32::from_rgb(0x62, 0x8E, 0xCB);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CommentTool {

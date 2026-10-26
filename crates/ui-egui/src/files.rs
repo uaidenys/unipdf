@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use pdfcraft_engine::{DocId, Edit, SplitBy};
 
-use crate::PdfCraftApp;
+use crate::UniPDFApp;
 
 /// Why files were picked.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -102,7 +102,7 @@ impl FilePurpose {
 /// The document a pick edits, as it was when the picker opened. Page positions captured then
 /// are only valid while it is unchanged, and the pick acts on the active document; so a pick
 /// that arrives after the document was edited, or stopped being the active one, is refused
-/// (see [`PdfCraftApp::still_pick_target`]).
+/// (see [`UniPDFApp::still_pick_target`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PickTarget {
     doc: DocId,
@@ -110,7 +110,7 @@ pub struct PickTarget {
 }
 
 /// Files picked asynchronously in a browser, waiting for the next frame (see
-/// [`PdfCraftApp::file_request`]).
+/// [`UniPDFApp::file_request`]).
 #[derive(Debug)]
 pub struct FileRequest {
     purpose: FilePurpose,
@@ -137,7 +137,7 @@ impl Default for SplitDraft {
     }
 }
 
-/// Acrobat's Split by: number of pages, file size, top-level bookmarks (and PdfCraft's
+/// Acrobat's Split by: number of pages, file size, top-level bookmarks (and UniPDF's
 /// before-selected-pages).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SplitMode {
@@ -254,7 +254,7 @@ fn read_named(path: &std::path::Path) -> Result<(String, Vec<u8>), (String, Stri
     }
 }
 
-impl PdfCraftApp {
+impl UniPDFApp {
     /// Ask for files to add to the Combine files list (its Add files… button).
     pub fn combine_dialog(&mut self) {
         self.pick_files(FilePurpose::Combine, true);
@@ -833,7 +833,7 @@ pub(crate) fn strip_pdf(name: &str) -> &str {
     name.strip_suffix(".pdf").or_else(|| name.strip_suffix(".PDF")).unwrap_or(name)
 }
 
-impl PdfCraftApp {
+impl UniPDFApp {
     /// Comments ▸ Import comments / Prepare a form ▸ Import data: XFDF, FDF, XML, CSV or text.
     pub fn import_data_dialog(&mut self) {
         #[cfg(not(target_arch = "wasm32"))]
@@ -1087,7 +1087,7 @@ mod stem_tests {
         let out = dir.join("a").join("out");
         std::fs::create_dir_all(&out).unwrap();
         let absolute = dir.join("abs.pdf").to_string_lossy().into_owned();
-        let mut app = crate::PdfCraftApp::new();
+        let mut app = crate::UniPDFApp::new();
         app.set_option("language", "en").unwrap();
         app.export_dir_override = Some(out.to_string_lossy().into_owned());
         for bad in ["../x.pdf", "..", ".", "", "sub/x.pdf", "sub\\x.pdf", "C:x.pdf", absolute.as_str()] {

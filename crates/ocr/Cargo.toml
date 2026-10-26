@@ -15,3 +15,8 @@ pdfcraft-fonts = { workspace = true }
 ocrs = { version = "0.13.1", default-features = false, features = ["rten"] }
 rten = { version = "0.26.0", default-features = false, features = ["rten_format"] }
 thiserror.workspace = true
+
+# UniPDF: Windows' own text recognition (reads Portuguese with accents, no model download).
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Media_Ocr", "Graphics_Imaging", "Storage_Streams", "Foundation", "Foundation_Collections", "Globalization"] }
+windows-future = "0.3"
