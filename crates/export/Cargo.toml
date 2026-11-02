@@ -12,4 +12,4 @@ workspace = true
 
 [dependencies]
 flate2.workspace = true
-rust_xlsxwriter = { version = "0.101", default-features = false }
+rust_xlsxwriter = { version = "0.102", default-features = false }
