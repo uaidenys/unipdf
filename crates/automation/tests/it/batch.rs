@@ -189,7 +189,8 @@ fn batch_ocr_uses_existing_models_or_reports_the_missing_models_per_file() {
     std::fs::write(dir.path().join("page.pdf"), pdf()).unwrap();
     let mut auto = Automation::new().with_root(dir.path()).unwrap();
     let report = result(&mut auto, json!({"paths":["page.pdf"],"steps":["ocr","optimize"],"out_dir":"out"}));
-    if pdfcraft_engine::ocr::available() {
+    // Windows has its own OCR, which needs no downloaded models.
+    if pdfcraft_engine::ocr::engine().is_ok() {
         assert_eq!(report["completed"], 1, "{report}");
         assert_eq!(report["files"][0]["steps"][0]["skipped_pages"], 1);
         assert!(dir.path().join("out/page.pdf").exists());

@@ -40,6 +40,7 @@ mod motion;
 mod reopen;
 mod settings;
 mod single_instance;
+mod splash;
 mod text_scale;
 mod updates;
 #[cfg(test)]
@@ -451,8 +452,34 @@ fn app_creator<'a>(
                 log::warn!("--{k} {v}: {e}");
             }
         }
-        Ok(Box::new(app))
+        // The opening animation, still when the system has animation effects off; none when an
+        // agent drives the app (`--control`) or UNI_NO_SPLASH is set.
+        #[cfg(target_os = "windows")]
+        let still = motion::reduced() == Some(true);
+        #[cfg(not(target_os = "windows"))]
+        let still = false;
+        let skip = control_file.is_some() || std::env::var_os("UNI_NO_SPLASH").is_some();
+        Ok(Box::new(Shell(app, splash::Splash::new(still, skip))))
     })
+}
+
+/// UniPDF with its opening animation drawn over it until the animation ends.
+struct Shell(UniPDFApp, splash::Splash);
+
+impl eframe::App for Shell {
+    fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        self.0.raw_input_hook(ctx, raw);
+    }
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.0.save(storage);
+    }
+    fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.0.logic(ctx, frame);
+    }
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        self.1.show(ui);
+        self.0.ui(ui, frame);
+    }
 }
 
 /// Tell the user when wgpu draws on the processor (WARP on Windows, llvmpipe on Linux) rather than

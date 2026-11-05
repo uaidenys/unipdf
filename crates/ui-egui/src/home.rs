@@ -40,7 +40,6 @@ pub fn show(app: &mut UniPDFApp, ui: &mut egui::Ui) {
                         widgets::artcraft_mark(ui, 28.0);
                         ui.vertical(|ui| {
                             ui.label(egui::RichText::new(tl!("Join the Uniphar community")).font(theme::semibold(15.0)));
-                            ui.label(egui::RichText::new(tl!("Get help, share feedback and follow development on Discord.")).color(t.text_muted));
                         });
                     });
                     ui.add_space(8.0);

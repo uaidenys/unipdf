@@ -5253,8 +5253,8 @@ fn organize_toolbar(view: &mut DocView, info: &DocInfo, editable: bool, dirty: b
         });
     });
     // Keys act on the selection unless a text field or a dialog has them (Delete under
-    // Preferences deleted the selected pages).
-    if editable && unobstructed && !ui.ctx().egui_wants_keyboard_input() {
+    // Preferences deleted the selected pages), the page range field among them.
+    if editable && unobstructed && !ui.ctx().egui_wants_keyboard_input() && !view.organize_range.typing {
         use egui::{Key, Modifiers};
         let (del, esc) = ui.input_mut(|i| {
             (
@@ -5770,6 +5770,7 @@ mod tests {
             location: None,
             contact: None,
             sub_filter: None,
+            policy: None,
             doc_timestamp: false,
             certify: None,
             revision: 1,

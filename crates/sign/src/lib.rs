@@ -17,6 +17,7 @@ pub mod keychain;
 pub mod keys;
 pub mod pdf;
 pub mod pkcs12;
+pub mod policy;
 pub mod revocation;
 mod rsa_pad;
 pub mod timestamp;
@@ -32,6 +33,7 @@ pub use pdf::{
     in_english, kind, list as signatures, sign, sign_with_timestamp, timestamp_document, validate,
 };
 pub use pkcs12::DigitalId;
+pub use policy::SignaturePolicy;
 pub use timestamp::{TimestampAuthority, TimestampQuery, TimestampToken};
 pub use x509::{Certificate, Name};
 

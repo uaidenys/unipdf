@@ -344,7 +344,7 @@ pub const WORDINGS: &[&str] = &[
     "The signature's byte range does not exclude exactly its contents.",
     "The signature contents are not hexadecimal.",
     "The signature could not be read ({}).",
-    "PdfCraft can't check this signature yet: {}.",
+    "UniPDF can't check this signature yet: {}.",
     "The signature uses the legacy adbe.x509.rsa_sha1 format.",
     // What was read leniently on the way, each sentence worded where the reading happens.
     "The signature is BER-encoded (indefinite lengths) rather than DER; it was read leniently.",
@@ -375,10 +375,10 @@ pub const WORDINGS: &[&str] = &[
     "The signer's certificate was not valid at the time of signing.",
     "The signer's certificate does not allow digital signatures (its key usage has neither digital signature nor non-repudiation).",
     "The signer's certificate is not issued for signing documents (its extended key usage has no document-signing purpose).",
-    "The signer's certificate has critical extensions PdfCraft does not recognize ({}).",
+    "The signer's certificate has critical extensions UniPDF does not recognize ({}).",
     // Why a certificate that matched the issuer was not used to build the chain.
     "The certificate of {} is not a CA certificate that may issue certificates, so it is not used to vouch for {}.",
-    "The certificate of {} has critical extensions PdfCraft does not recognize, so it is not used to vouch for {}.",
+    "The certificate of {} has critical extensions UniPDF does not recognize, so it is not used to vouch for {}.",
     "The certificate of {} does not allow this many CA certificates below it (path length), so it is not used to vouch for {}.",
     "The certificate of {} was not valid at the time of signing, so it is not used to vouch for {}.",
     "The signer's identity is unknown because it has not been included in your list of trusted certificates and none of its parent certificates are trusted certificates.",
@@ -436,6 +436,8 @@ pub struct SignatureInfo {
     pub location: Option<String>,
     pub contact: Option<String>,
     pub sub_filter: Option<String>,
+    /// The signature policy the signature names (its known name, or its OID).
+    pub policy: Option<String>,
     /// True for a standalone document timestamp (`/ETSI.RFC3161`), not a field signature.
     pub doc_timestamp: bool,
     /// DocMDP permissions when this is a certification signature (1–3).
@@ -604,6 +606,7 @@ pub fn list_cached(doc: &Document, bytes: &[u8], trust: &TrustStore, cache: &Dig
             location: None,
             contact: None,
             sub_filter: None,
+            policy: None,
             doc_timestamp: false,
             certify: None,
             revision: 0,
@@ -647,6 +650,7 @@ pub fn list_cached(doc: &Document, bytes: &[u8], trust: &TrustStore, cache: &Dig
             location: None,
             contact: None,
             sub_filter: Some("ETSI.RFC3161".to_string()),
+            policy: None,
             doc_timestamp: true,
             certify: None,
             revision: 0,
@@ -743,7 +747,7 @@ fn validate_into(doc: &Document, bytes: &[u8], trust: &TrustStore, v: &Dict, inf
     let unsupported = |info: &mut SignatureInfo, why: &str| {
         info.status = Status::Unknown;
         // What is not supported yet is named by the reader, in its own words.
-        info.details.push(Detail::of("PdfCraft can't check this signature yet: {}.", Fill::Reason(why.to_owned())));
+        info.details.push(Detail::of("UniPDF can't check this signature yet: {}.", Fill::Reason(why.to_owned())));
     };
     if info.sub_filter.as_deref() == Some("adbe.x509.rsa_sha1") {
         return validate_x509_rsa_sha1(doc, bytes, trust, v, info, cache, (l0, o1, covered), &contents);
@@ -758,6 +762,7 @@ fn validate_into(doc: &Document, bytes: &[u8], trust: &TrustStore, v: &Dict, inf
     // A quirk is a whole sentence the reader words for itself, so it goes on the list in `WORDINGS`.
     info.details.extend(sd.quirks.iter().copied().map(Detail::plain));
     info.digest = Some(s.digest);
+    info.policy = s.policy.as_deref().map(|o| crate::policy::SignaturePolicy::from_oid(o).map_or_else(|| o.to_string(), |p| p.name().to_string()));
     info.timestamp = s.timestamp;
     let mut unverified_time = None;
     if let Some(raw) = &s.timestamp_token {
@@ -1111,7 +1116,7 @@ fn check_dss_revocation(doc: &Document, signer: Option<&Certificate>, at: &Optio
         None if cut => {
             info.details.push(Detail::of(
                 "The signature could not be checked ({}).",
-                Fill::Reason("the /DSS holds more revocation evidence than PdfCraft reads".into()),
+                Fill::Reason("the /DSS holds more revocation evidence than UniPDF reads".into()),
             ));
             DssRevocation::Incomplete
         }
@@ -1300,7 +1305,7 @@ fn validate_x509_rsa_sha1(
             info.certificate = Some(cert);
             info.status = Status::Unknown;
             // What is not supported yet is named by the reader, in its own words.
-            info.details.push(Detail::of("PdfCraft can't check this signature yet: {}.", Fill::Reason(e.to_string())));
+            info.details.push(Detail::of("UniPDF can't check this signature yet: {}.", Fill::Reason(e.to_string())));
             return;
         }
         Err(e) => {
@@ -1911,6 +1916,9 @@ pub struct SignOptions {
     pub appearance_labels: AppearanceLabels,
     /// A drawing, typed signature or image shown where the large name would be.
     pub graphic: Option<crate::graphic::Graphic>,
+    /// Sign under this policy (ICP-Brasil AD-RB): its identifier joins the signed attributes and
+    /// the signature dictionary takes the policy's `/Filter` and `/SubFilter`.
+    pub policy: Option<crate::policy::SignaturePolicy>,
 }
 
 /// What an encrypted document's permissions (ISO 32000-2 §7.6.4.2, Table 22) allow when it was
@@ -1976,6 +1984,9 @@ fn sign_inner(
         return Err(SignError::Pdf("save the document's new security settings before signing it".into()));
     }
     check_signing_permissions(doc, opts)?;
+    if opts.policy.is_some() && !crate::policy::is_icp_brasil(&id.certificate) {
+        return Err(SignError::Pdf("the ICP-Brasil standard needs a certificate issued under ICP-Brasil".into()));
+    }
     let mut doc = doc.clone();
     let root = doc.root().ok_or_else(|| SignError::Pdf("the document has no catalog".into()))?;
     let alg = id.key.preferred_digest();
@@ -1985,8 +1996,9 @@ fn sign_inner(
     // The signature dictionary.
     let mut v = Dict::new();
     v.set(b"Type".to_vec(), Object::name("Sig"));
-    v.set(b"Filter".to_vec(), Object::name("Adobe.PPKLite"));
-    v.set(b"SubFilter".to_vec(), Object::name("ETSI.CAdES.detached"));
+    let (filter, sub_filter) = opts.policy.map_or(("Adobe.PPKLite", "ETSI.CAdES.detached"), |p| p.filters());
+    v.set(b"Filter".to_vec(), Object::name(filter));
+    v.set(b"SubFilter".to_vec(), Object::name(sub_filter));
     v.set(b"ByteRange".to_vec(), Object::Array([0].iter().chain(BR_MARK.iter()).map(|n| Object::Int(*n)).collect()));
     v.set(b"Contents".to_vec(), Object::String(PdfString { bytes: vec![0; reserve], hex: true }));
     v.set(b"M".to_vec(), PdfString::literal(opts.date.as_bytes().to_vec()));
@@ -1997,7 +2009,7 @@ fn sign_inner(
         }
     }
     let mut app = Dict::new();
-    app.set(b"Name".to_vec(), Object::name("PdfCraft"));
+    app.set(b"Name".to_vec(), Object::name("UniPDF"));
     let mut build = Dict::new();
     build.set(b"App".to_vec(), Object::Dict(app));
     v.set(b"Prop_Build".to_vec(), Object::Dict(build));
@@ -2126,7 +2138,10 @@ fn sign_inner(
     br_text.resize(width, b' ');
     out[br_at..br_at + width].copy_from_slice(&br_text);
     let digest = alg.digest(&[&out[..start], &out[end..]]);
-    let base = crate::cms::sign_detached(&id.key, &id.certificate, &id.chain, alg, &digest)?;
+    let base = match opts.policy {
+        None => crate::cms::sign_detached(&id.key, &id.certificate, &id.chain, alg, &digest)?,
+        Some(p) => crate::cms::sign_detached_under(&id.key, &id.certificate, &id.chain, alg, &digest, p)?,
+    };
     let cms = match tsa {
         None => base,
         Some(t) => {
@@ -2170,7 +2185,7 @@ pub fn timestamp_document(doc: &Document, tsa: &dyn crate::timestamp::TimestampA
     v.set(b"Contents".to_vec(), Object::String(PdfString { bytes: vec![0; TOKEN_RESERVE], hex: true }));
     v.set(b"M".to_vec(), PdfString::literal(date.as_bytes().to_vec()));
     let mut app = Dict::new();
-    app.set(b"Name".to_vec(), Object::name("PdfCraft"));
+    app.set(b"Name".to_vec(), Object::name("UniPDF"));
     let mut build = Dict::new();
     build.set(b"App".to_vec(), Object::Dict(app));
     v.set(b"Prop_Build".to_vec(), Object::Dict(build));

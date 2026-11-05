@@ -942,6 +942,7 @@ pub fn right_panel(app: &mut UniPDFApp, ui: &mut egui::Ui) {
     }
     match sig_action {
         Some(crate::sign_ui::PanelAction::Validate) => app.run_command("sign.validate"),
+        Some(crate::sign_ui::PanelAction::ValidateAtIti) => app.validate_at_iti(id),
         Some(crate::sign_ui::PanelAction::GoTo(p)) => app.views[index].go_to_page(p),
         Some(crate::sign_ui::PanelAction::Trust(c)) => app.trust_certificate(*c),
         Some(crate::sign_ui::PanelAction::ViewCertificate(chain)) => {

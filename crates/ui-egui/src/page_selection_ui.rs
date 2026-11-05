@@ -8,6 +8,10 @@ pub(crate) struct PageSelectionInput {
     text: String,
     selection: BTreeSet<usize>,
     error: Option<String>,
+    /// The field had the keyboard last frame. egui lets go of it before any widget runs when
+    /// Escape is pressed, so the page grid, drawn before the tools panel, checks this instead
+    /// to leave that Escape to the field.
+    pub(crate) typing: bool,
 }
 
 /// Blank clears the explicit selection. Repeated/reversed ranges become a sorted set.
@@ -97,6 +101,7 @@ impl PageSelectionInput {
                     .hint_text(current.saturating_add(1).to_string()),
             );
             field.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, ui.is_enabled(), label));
+            self.typing = field.has_focus();
             commit = ui.is_enabled() && !cancel && field.lost_focus();
             let pick = crate::icons::button(ui, "chevron-down", 26.0, false, tl!("Select pages"));
             chosen = egui::Popup::menu(&pick).show(menu).and_then(|r| r.inner);

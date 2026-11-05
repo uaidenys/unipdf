@@ -24,7 +24,7 @@ fn main() {
         .set_manifest(windows_manifest::WINDOWS_MANIFEST)
         .set("ProductName", "UniPDF")
         .set("FileDescription", "UniPDF PDF workbench")
-        .set("LegalCopyright", "Copyright (c) the UniPDF contributors. MIT OR Apache-2.0.")
+        .set("LegalCopyright", "Copyright (c) Denys Rodrigues de Oliveira - Uniphar Indústria Farmacêutica. Based on PdfCraft (MIT OR Apache-2.0).")
         .set("OriginalFilename", "pdfcraft.exe")
         .set("InternalName", "pdfcraft");
     if let Err(e) = res.compile() {

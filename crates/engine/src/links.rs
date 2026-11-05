@@ -7,10 +7,11 @@ use std::path::{Path, PathBuf};
 /// The app's name in ArtCraft URLs (`getartcraft.com/apps/{APP}`, `github.com/storytold/{APP}`).
 pub const APP: &str = "pdfcraft";
 
-pub const DISCORD: &str = "https://uniphar.com.br";
 pub const WEBSITE: &str = "https://uniphar.com.br";
 pub const APP_PAGE: &str = "https://github.com/uaidenys/unipdf";
 pub const GITHUB: &str = "https://github.com/uaidenys/unipdf";
+/// Brazil's official signature validator (ITI), where a signed PDF is checked against ICP-Brasil.
+pub const ITI_VALIDATOR: &str = "https://validar.iti.gov.br/";
 
 /// A link and the registry command that opens it.
 #[derive(Clone, Copy, Debug)]
@@ -22,9 +23,8 @@ pub struct Link {
     pub icon: &'static str,
 }
 
-/// In the order they are shown. Discord comes first: it is where people get help fastest.
+/// In the order they are shown; the first is the prominent one.
 pub const LINKS: &[Link] = &[
-    Link { command: "help.discord", label: "Site da Uniphar", url: DISCORD, icon: "messages-square" },
     Link { command: "help.app_page", label: "Página do UniPDF", url: APP_PAGE, icon: "globe" },
     Link { command: "help.github", label: "UniPDF no GitHub", url: GITHUB, icon: "code-xml" },
     Link { command: "help.website", label: "Uniphar Indústria Farmacêutica", url: WEBSITE, icon: "external-link" },
@@ -554,9 +554,10 @@ mod tests {
     }
 
     #[test]
-    fn urls_follow_the_artcraft_scheme() {
-        assert_eq!(super::APP_PAGE, format!("{}/apps/{}", super::WEBSITE, super::APP));
-        assert_eq!(super::GITHUB, format!("https://github.com/storytold/{}", super::APP));
+    fn urls_follow_the_uniphar_scheme() {
+        assert_eq!(super::WEBSITE, "https://uniphar.com.br");
+        assert_eq!(super::GITHUB, "https://github.com/uaidenys/unipdf");
+        assert!(super::LINKS.iter().all(|l| !l.url.contains("discord")), "no Discord link");
         for l in super::LINKS {
             assert!(l.url.starts_with("https://"), "{}", l.url);
             assert!(crate::commands::command(l.command).is_some(), "{} is a registered command", l.command);

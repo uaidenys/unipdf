@@ -2576,3 +2576,73 @@ fn a_timestamp_from_a_certificate_not_issued_for_time_stamping_is_not_trusted_ti
     assert_eq!(s.timestamp_time, None, "{:?}", s.details);
     assert!(s.details.iter().any(|d| d.message.contains("not issued for time stamping")), "{:?}", s.details);
 }
+
+/// A self-signed ID whose name says it was issued under ICP-Brasil (`O=ICP-Brasil`).
+fn icp_brasil_id() -> DigitalId {
+    let key = pdfcraft_sign::PrivateKey::generate_p256().unwrap();
+    let name = Name::build("Fulano de Tal", "Teste", "ICP-Brasil", "", "BR");
+    let alg = key.preferred_digest();
+    let sig_alg = key.signature_algorithm(alg);
+    let from = Time { year: 2026, month: 10, day: 2, hour: 0, minute: 0, second: 0 };
+    let until = Time { year: 2036, ..from };
+    let tbs = der::seq(&[
+        &der::explicit(0, &der::int(2)),
+        &der::uint(&[0x42]),
+        &sig_alg,
+        &name.raw,
+        &der::seq(&[&from.encode(), &until.encode()]),
+        &name.raw,
+        &key.public_key().spki(),
+    ]);
+    let signature = key.sign(alg, &tbs).unwrap();
+    let certificate = Certificate::parse(&der::seq(&[&tbs, &sig_alg, &der::bit_string(&signature)])).unwrap();
+    DigitalId { key, certificate, chain: Vec::new(), friendly_name: None }
+}
+
+#[test]
+fn signing_under_the_icp_brasil_policy_names_it_and_still_validates() {
+    let id = icp_brasil_id();
+    let policy = pdfcraft_sign::SignaturePolicy::IcpBrasilAdRb;
+    let signed = pdfcraft_sign::sign(&open(&fixture()), &id, &SignOptions { policy: Some(policy), ..opts() }).unwrap();
+    // The dictionary ICP-Brasil's policy asks for.
+    let tail = String::from_utf8_lossy(&signed[fixture().len()..]).into_owned();
+    assert!(tail.contains("/Filter /PBAD_PAdES") && tail.contains("/SubFilter /PBAD.PAdES"), "{tail}");
+    let doc = open(&signed);
+    let trusted = signatures(&doc, &signed, &TrustStore { certs: vec![id.certificate.clone()] });
+    let s = trusted.iter().find(|s| s.signed).unwrap();
+    assert_eq!(s.status, Status::Valid, "{:?}", s.details);
+    assert_eq!(s.sub_filter.as_deref(), Some("PBAD.PAdES"));
+    assert_eq!(s.policy.as_deref(), Some(policy.name()));
+    // The signed attributes carry the policy's identifier, hash and address.
+    let cms = pdfcraft_sign::cms::SignedData::parse(&contents_of(&signed)).unwrap();
+    assert_eq!(cms.signer.policy.as_deref(), Some("2.16.76.1.7.1.11.1.3"));
+    let attrs = cms.signer.signed_attrs.unwrap();
+    assert!(attrs.windows(32).any(|w| w == policy.sha256()));
+    assert!(attrs.windows(policy.uri().len()).any(|w| w == policy.uri().as_bytes()));
+
+    // Without the policy, the same ID signs as before.
+    let plain = pdfcraft_sign::sign(&open(&fixture()), &id, &opts()).unwrap();
+    let s = signatures(&open(&plain), &plain, &TrustStore::default()).into_iter().find(|s| s.signed).unwrap();
+    assert_eq!((s.sub_filter.as_deref(), s.policy.as_deref()), (Some("ETSI.CAdES.detached"), None));
+}
+
+#[test]
+fn the_icp_brasil_policy_needs_an_icp_brasil_certificate() {
+    let id = pkcs12::open(&data("rsa-aes.p12"), "test").unwrap();
+    let opts = SignOptions { policy: Some(pdfcraft_sign::SignaturePolicy::IcpBrasilAdRb), ..opts() };
+    let err = pdfcraft_sign::sign(&open(&fixture()), &id, &opts).unwrap_err();
+    assert!(err.to_string().contains("ICP-Brasil"), "{err}");
+}
+
+/// The CMS object in the last signature's `/Contents`.
+fn contents_of(signed: &[u8]) -> Vec<u8> {
+    let at = signed.windows(10).rposition(|w| w == b"/Contents ").unwrap() + 10;
+    let start = at + signed[at..].iter().position(|b| *b == b'<').unwrap() + 1;
+    let end = start + signed[start..].iter().position(|b| *b == b'>').unwrap();
+    let hex = &signed[start..end];
+    let mut out: Vec<u8> = hex.chunks(2).map(|c| u8::from_str_radix(std::str::from_utf8(c).unwrap(), 16).unwrap()).collect();
+    // The placeholder is zero-padded after the DER object.
+    let len = der::Tlv::parse(&out).unwrap().0.raw.len();
+    out.truncate(len);
+    out
+}

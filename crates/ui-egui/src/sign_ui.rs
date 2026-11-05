@@ -26,6 +26,9 @@ pub struct DigitalIdEntry {
     /// greyed with the reason, and never selectable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unusable: Option<String>,
+    /// Issued under ICP-Brasil: signing can add the ICP-Brasil policy.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub icp_brasil: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -113,6 +116,8 @@ pub struct SignDraft {
     pub error: Option<String>,
     /// Sign with a Digital ID ▸ Remove was clicked for this list entry: asking to confirm.
     pub confirm_remove: Option<usize>,
+    /// Sign under the ICP-Brasil policy (AD-RB), for an ICP-Brasil certificate.
+    pub icp_brasil: bool,
 }
 
 impl SignDraft {
@@ -135,6 +140,7 @@ impl SignDraft {
             new_id: NewIdDraft::default(),
             error: None,
             confirm_remove: None,
+            icp_brasil: false,
         }
     }
 }
@@ -249,6 +255,7 @@ pub fn entry_for(path: &str, c: &Certificate) -> DigitalIdEntry {
         email: c.subject.email().unwrap_or("").to_string(),
         expires: format!("{:04}.{:02}.{:02}", c.not_after.year, c.not_after.month, c.not_after.day),
         unusable: None,
+        icp_brasil: sign::policy::is_icp_brasil(c),
     }
 }
 
@@ -262,10 +269,25 @@ fn entry_unusable(u: &sign::windows::Unusable) -> DigitalIdEntry {
         email: String::new(),
         expires: String::new(),
         unusable: Some(u.reason.clone()),
+        icp_brasil: false,
     }
 }
 
 impl UniPDFApp {
+    /// Validate at ITI: the ITI validator can't be handed a file, so open it in the browser and
+    /// show the saved file in the file manager, ready to drag onto the page. Nothing is uploaded
+    /// by UniPDF.
+    pub(crate) fn validate_at_iti(&mut self, doc: pdfcraft_engine::DocId) {
+        let Some(path) = self.session.get(doc).and_then(|d| d.path.clone()) else {
+            self.notify_tr("Save the document first: the ITI validator checks the file on disk.");
+            return;
+        };
+        self.open_url(pdfcraft_engine::links::ITI_VALIDATOR);
+        self.tab_action(crate::tab_context::Action::Reveal(doc));
+        let file = std::path::Path::new(&path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or(path);
+        self.notify_fmt("Drag {file} onto the ITI page to validate its signatures.", &[("file", &file)]);
+    }
+
     /// Export certificate: write `c` as PEM into a chosen folder, named after its subject.
     pub(crate) fn export_certificate(&mut self, c: &Certificate) {
         let name = format!("{}.cer", crate::files::attachment_file_name(&c.display_name()));
@@ -445,6 +467,7 @@ impl UniPDFApp {
             // The labels the preview shows: in the interface language, or all in English.
             appearance_labels: appearance_labels(crate::i18n::current()).0,
             graphic,
+            policy: (d.icp_brasil && entry.icp_brasil).then_some(sign::SignaturePolicy::IcpBrasilAdRb),
             ..SignOptions::default()
         };
         // Signing saves, as in Acrobat: choose where (a cancelled save cancels signing). The
@@ -1048,6 +1071,17 @@ fn sign_as(ui: &mut egui::Ui, app: &mut UniPDFApp, t: &Tokens) -> bool {
     } else {
         ui.label(egui::RichText::new(tl!("The signature will be invisible.")).color(t.text_muted));
     }
+    // Both kinds stay available: the usual PAdES signature, or (for an ICP-Brasil certificate)
+    // the same signature under the ICP-Brasil policy that the ITI validator checks.
+    if entry.icp_brasil {
+        ui.add(widgets::checkbox(&mut d.icp_brasil, tl!("ICP-Brasil standard (AD-RB policy)")));
+        ui.label(
+            egui::RichText::new(tl!("Adds the ICP-Brasil signature policy that the ITI validator (validar.iti.gov.br) checks."))
+                .small()
+                .color(t.text_muted),
+        );
+        ui.add_space(6.0);
+    }
     egui::Grid::new("sign-as").num_columns(2).spacing([12.0, 8.0]).show(ui, |ui| {
         if d.certify.is_some() {
             ui.label(tl!("Permitted actions after certifying"));
@@ -1181,6 +1215,8 @@ pub(crate) fn signature_status_style(status: SignatureStatus) -> (&'static str, 
 #[derive(Clone, Debug)]
 pub enum PanelAction {
     Validate,
+    /// Open the ITI validator and show the file to drop on it.
+    ValidateAtIti,
     GoTo(usize),
     Trust(Box<Certificate>),
     ViewSigned {
@@ -1199,6 +1235,13 @@ pub(crate) fn panel(ui: &mut egui::Ui, t: &Tokens, sigs: &[SignatureInfo], expan
     ui.horizontal(|ui| {
         if widgets::pill_button(ui, tl!("Validate all"), false).clicked() {
             action = Some(PanelAction::Validate);
+        }
+        if sigs.iter().any(|s| s.signed)
+            && widgets::pill_button(ui, tl!("Validate at ITI"), false)
+                .on_hover_text(tl!("Opens validar.iti.gov.br and shows the file to drag onto it."))
+                .clicked()
+        {
+            action = Some(PanelAction::ValidateAtIti);
         }
     });
     ui.add_space(6.0);
@@ -1281,6 +1324,9 @@ pub(crate) fn panel(ui: &mut egui::Ui, t: &Tokens, sigs: &[SignatureInfo], expan
             }
             if let Some(a) = &s.algorithm {
                 row(ui, "Algorithm", a);
+            }
+            if let Some(p) = &s.policy {
+                row(ui, "Signature policy", p);
             }
             if let Some(c) = &s.certificate {
                 row(ui, "Signer", &c.subject.display());
@@ -1590,7 +1636,15 @@ mod tests {
     }
 
     fn listed(path: &str, name: &str) -> DigitalIdEntry {
-        DigitalIdEntry { path: path.into(), name: name.into(), issuer: String::new(), email: String::new(), expires: String::new(), unusable: None }
+        DigitalIdEntry {
+            path: path.into(),
+            name: name.into(),
+            issuer: String::new(),
+            email: String::new(),
+            expires: String::new(),
+            unusable: None,
+            icp_brasil: false,
+        }
     }
 
     /// Issue #1396: an imported ID can be taken off the list (its file stays), the dialog's
@@ -1683,6 +1737,7 @@ mod tests {
             location: None,
             contact: None,
             sub_filter: None,
+            policy: None,
             doc_timestamp: false,
             certify,
             revision: 1,

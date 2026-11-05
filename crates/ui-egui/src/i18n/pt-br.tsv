@@ -2801,3 +2801,10 @@ theme	Appearance	Aparência
 	the first row number can be at most {max}	o número da primeira linha pode ser no máximo {max}
 	the area, the spacing and the column widths must be numbers, the spacing 0 or more and each width more than 0	a área, o espaçamento e as larguras das colunas devem ser números, o espaçamento 0 ou mais e cada largura maior que 0
 	Export to Excel…	Exportar para Excel…
+	ICP-Brasil standard (AD-RB policy)	Padrão ICP-Brasil (política AD-RB)
+	Adds the ICP-Brasil signature policy that the ITI validator (validar.iti.gov.br) checks.	Acrescenta a política de assinatura ICP-Brasil que o validador do ITI (validar.iti.gov.br) confere.
+	Validate at ITI	Validar no ITI
+	Opens validar.iti.gov.br and shows the file to drag onto it.	Abre o validar.iti.gov.br e mostra o arquivo para arrastar até lá.
+	Signature policy	Política de assinatura
+	Save the document first: the ITI validator checks the file on disk.	Salve o documento primeiro: o validador do ITI confere o arquivo salvo no disco.
+	Drag {file} onto the ITI page to validate its signatures.	Arraste {file} para a página do ITI para validar as assinaturas.

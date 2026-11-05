@@ -4,7 +4,7 @@ use egui::{Pos2, pos2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use pdfcraft_engine::SignatureStatus;
-use pdfcraft_ui_egui::{Dialog, PdfCraftApp, QuickTool, RightPanel, SignStep};
+use pdfcraft_ui_egui::{Dialog, UniPDFApp, QuickTool, RightPanel, SignStep};
 
 const FIXTURE: &[u8] = b"%PDF-1.7
 1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
@@ -27,9 +27,9 @@ fn dir() -> std::path::PathBuf {
     d
 }
 
-fn harness(dir: std::path::PathBuf) -> Harness<'static, PdfCraftApp> {
+fn harness(dir: std::path::PathBuf) -> Harness<'static, UniPDFApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |_cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = UniPDFApp::new();
         app.set_option("language", "en").unwrap();
         app.open_bytes("contract.pdf", None, FIXTURE.to_vec()).expect("opens");
         app.set_option("left", "closed").unwrap();
@@ -41,12 +41,12 @@ fn harness(dir: std::path::PathBuf) -> Harness<'static, PdfCraftApp> {
     h
 }
 
-fn at(h: &Harness<'static, PdfCraftApp>, x: f32, y: f32) -> Pos2 {
+fn at(h: &Harness<'static, UniPDFApp>, x: f32, y: f32) -> Pos2 {
     let r = h.state().views[0].page_screen_rect(0).expect("page 1 on screen");
     pos2(r.left() + x / 300.0 * r.width(), r.top() + (200.0 - y) / 200.0 * r.height())
 }
 
-fn drag(h: &mut Harness<'static, PdfCraftApp>, from: Pos2, to: Pos2) {
+fn drag(h: &mut Harness<'static, UniPDFApp>, from: Pos2, to: Pos2) {
     h.hover_at(from);
     h.run_steps(1);
     h.drag_at(from);
@@ -59,7 +59,7 @@ fn drag(h: &mut Harness<'static, PdfCraftApp>, from: Pos2, to: Pos2) {
     h.run_steps(3);
 }
 
-fn field<'a>(h: &'a Harness<'static, PdfCraftApp>, label: &'a str) -> egui_kittest::Node<'a> {
+fn field<'a>(h: &'a Harness<'static, UniPDFApp>, label: &'a str) -> egui_kittest::Node<'a> {
     h.get_all_by_label(label).last().unwrap_or_else(|| panic!("no {label:?}"))
 }
 
@@ -241,7 +241,7 @@ fn drawing_a_signature_creating_an_id_signing_and_trusting() {
     assert_eq!(h.state().views.len(), 1);
     // Trusted certificates and the ID list persist.
     let saved = h.state().persist();
-    let mut fresh = PdfCraftApp::new();
+    let mut fresh = UniPDFApp::new();
     fresh.set_option("language", "en").unwrap();
     fresh.restore(&saved);
     assert_eq!((fresh.digital_ids.len(), fresh.session.trusted_certificates().len()), (1, 1));
@@ -298,14 +298,14 @@ fn save_as_keeps_a_signed_document_incremental() {
     let out = dir().join("copy.pdf");
     let (bytes, cert) = (signed.to_vec(), digital_id.certificate.clone());
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |_cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = UniPDFApp::new();
         app.set_option("language", "en").unwrap();
         app.open_bytes("contract.pdf", None, bytes).expect("opens");
         app.session.set_trusted_certificates(vec![cert]);
         app
     });
     h.run_steps(4);
-    let status = |h: &Harness<'static, PdfCraftApp>| {
+    let status = |h: &Harness<'static, UniPDFApp>| {
         let s = h.state();
         s.session.get(s.views[0].id).unwrap().signatures.iter().find(|x| x.signed).map(|x| x.status)
     };
@@ -377,7 +377,7 @@ fn the_fill_and_sign_signature_or_an_image_shows_in_a_digital_signature() {
     let mut h = harness(dir.clone());
     let p12 = concat!(env!("CARGO_MANIFEST_DIR"), "/../sign/tests/data/ec-p256.p12");
     let cert = pdfcraft_engine::sign::pkcs12::open(&std::fs::read(p12).unwrap(), "test").unwrap().certificate;
-    let sign_as = |h: &mut Harness<'static, PdfCraftApp>, rect: [f64; 4]| {
+    let sign_as = |h: &mut Harness<'static, UniPDFApp>, rect: [f64; 4]| {
         h.state_mut().start_signing(0, Some(rect), None, None);
         let entry = h.state_mut().add_digital_id(p12, &cert);
         let d = h.state_mut().sign_draft.as_mut().unwrap();
@@ -425,7 +425,7 @@ fn the_fill_and_sign_signature_or_an_image_shows_in_a_digital_signature() {
     let signed = std::fs::read(dir.join("contract_signed.pdf")).unwrap();
     assert!(signed.windows(6).any(|w| w == b"/Image"), "the image is embedded");
     assert_eq!(s.session.get(s.views[0].id).unwrap().signatures.iter().filter(|x| x.signed).count(), 2);
-    let mut fresh = PdfCraftApp::new();
+    let mut fresh = UniPDFApp::new();
     fresh.restore(&s.persist());
     assert_eq!(fresh.sign_graphic, SignGraphic::Image(image));
     // A saved choice that can't be read back falls back to the name.
@@ -489,7 +489,7 @@ fn the_signature_labels_follow_the_interface_language() {
 
 #[test]
 fn os_store_identities_are_not_persisted() {
-    let mut app = PdfCraftApp::new();
+    let mut app = UniPDFApp::new();
     app.set_option("language", "en").unwrap();
     for path in ["windows:Store signer", "keychain:Store signer", "file-id.p12"] {
         app.digital_ids.push(pdfcraft_ui_egui::DigitalIdEntry {
@@ -499,13 +499,14 @@ fn os_store_identities_are_not_persisted() {
             email: String::new(),
             expires: "2030.01.01".into(),
             unusable: None,
+            icp_brasil: false,
         });
     }
     let saved = app.persist();
     let settings: serde_json::Value = serde_json::from_str(&saved).unwrap();
     assert_eq!(settings["digital_ids"].as_array().unwrap().len(), 1);
     assert_eq!(settings["digital_ids"][0]["path"], "file-id.p12");
-    let mut restored = PdfCraftApp::new();
+    let mut restored = UniPDFApp::new();
     restored.set_option("language", "en").unwrap();
     restored.restore(&saved);
     assert_eq!(restored.digital_ids.len(), 1);
@@ -524,6 +525,7 @@ fn windows_store_identity_does_not_ask_for_a_file_password() {
         email: String::new(),
         expires: "2030.01.01".into(),
         unusable: None,
+        icp_brasil: false,
     });
     let draft = h.state_mut().sign_draft.as_mut().unwrap();
     draft.step = SignStep::Choose;
@@ -533,7 +535,7 @@ fn windows_store_identity_does_not_ask_for_a_file_password() {
     h.run_steps(3);
     h.get_by_label("Sign as \"Store signer\"");
     assert_eq!(h.query_all_by_label("Digital ID password").count(), 0);
-    h.get_by_label("The key is in the Windows certificate store, which may ask to allow PdfCraft to use it.");
+    h.get_by_label("The key is in the Windows certificate store, which may ask to allow UniPDF to use it.");
     h.get_by_label("Sign").click();
     h.run_steps(3);
     assert_eq!(h.state().dialog, Some(Dialog::Sign));
@@ -554,6 +556,7 @@ fn long_digital_id_names_stay_inside_the_picker() {
         email: String::new(),
         expires: "2030.01.01".into(),
         unusable: None,
+        icp_brasil: false,
     });
     h.state_mut().sign_draft.as_mut().unwrap().step = SignStep::Choose;
     h.run_steps(3);
@@ -591,6 +594,7 @@ fn an_unusable_id_is_shown_with_its_reason_and_cannot_be_chosen() {
         email: String::new(),
         expires: String::new(),
         unusable: Some("its private key can't be opened: the key is missing from its key store (Windows error 0x80090016)".into()),
+        icp_brasil: false,
     });
     h.state_mut().start_signing(0, None, None, None);
     h.run_steps(3);
@@ -611,6 +615,7 @@ fn an_unusable_id_is_shown_with_its_reason_and_cannot_be_chosen() {
         email: String::new(),
         expires: "2030.01.01".into(),
         unusable: None,
+        icp_brasil: false,
     });
     h.state_mut().start_signing(0, None, None, None);
     h.run_steps(3);
@@ -685,4 +690,62 @@ fn signing_preserves_destination_opening_attributes() {
     assert_eq!(xattr::get(&dest, "com.apple.LaunchServices.OpenWith").unwrap(), Some(b"existing binding".to_vec()));
     assert_eq!(xattr::get(&dest, "com.apple.quarantine").unwrap(), Some(b"0082;1234;Preview;".to_vec()));
     let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn the_icp_brasil_option_is_offered_for_icp_brasil_certificates_only() {
+    for icp_brasil in [false, true] {
+        let mut h = harness(dir());
+        h.state_mut().start_signing(0, None, None, None);
+        h.state_mut().digital_ids.push(pdfcraft_ui_egui::DigitalIdEntry {
+            path: "windows:No Such Signer".into(),
+            name: "Store signer".into(),
+            issuer: "AC Teste".into(),
+            email: String::new(),
+            expires: "2030.01.01".into(),
+            unusable: None,
+            icp_brasil,
+        });
+        let draft = h.state_mut().sign_draft.as_mut().unwrap();
+        draft.step = SignStep::SignAs;
+        draft.selected = Some(0);
+        h.run_steps(3);
+        let offered = h.query_by_label("ICP-Brasil standard (AD-RB policy)").is_some();
+        assert_eq!(offered, icp_brasil, "the option shows for ICP-Brasil certificates only");
+        if icp_brasil {
+            // Off by default: the usual signature stays the first choice.
+            assert!(!h.state().sign_draft.as_ref().unwrap().icp_brasil);
+            h.get_by_label("ICP-Brasil standard (AD-RB policy)").click();
+            h.run_steps(2);
+            assert!(h.state().sign_draft.as_ref().unwrap().icp_brasil);
+        }
+    }
+}
+
+#[test]
+fn validate_at_iti_needs_a_saved_signed_file() {
+    let p12 = concat!(env!("CARGO_MANIFEST_DIR"), "/../sign/tests/data/ec-p256.p12");
+    let digital_id = pdfcraft_engine::sign::pkcs12::open(&std::fs::read(p12).unwrap(), "test").unwrap();
+    let mut s = pdfcraft_engine::Session::new();
+    let id = s.open("contract.pdf", None, std::sync::Arc::new(FIXTURE.to_vec()), None).unwrap();
+    let opts = pdfcraft_engine::SignOptions { page: 0, rect: Some([20.0, 20.0, 180.0, 60.0]), ..Default::default() };
+    let signed = s.sign(id, &digital_id, opts).unwrap().to_vec();
+    // Unsigned: no button.
+    let mut h = harness(dir());
+    h.state_mut().right = Some(RightPanel::Signatures);
+    h.run_steps(3);
+    assert!(h.query_by_label("Validate at ITI").is_none());
+    // Signed but not on disk (opened from bytes): the validator can't be handed it.
+    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |_cc| {
+        let mut app = UniPDFApp::new();
+        app.set_option("language", "en").unwrap();
+        app.open_bytes("contract.pdf", None, signed).expect("opens");
+        app.right = Some(RightPanel::Signatures);
+        app
+    });
+    h.run_steps(4);
+    h.get_by_label("Validate at ITI").click();
+    h.run_steps(2);
+    assert_eq!(h.state().last_opened_url, None);
+    assert_eq!(h.state().toast.clone().unwrap().0, "Save the document first: the ITI validator checks the file on disk.");
 }

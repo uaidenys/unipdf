@@ -42,6 +42,8 @@ pub struct SignerInfo {
     pub timestamp: bool,
     /// The attached token's raw CMS bytes, when present.
     pub timestamp_token: Option<Vec<u8>>,
+    /// The signature policy's OID (CAdES signature-policy-identifier), when one is named.
+    pub policy: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -255,6 +257,7 @@ fn parse_signer(si: &Tlv<'_>) -> Result<SignerInfo, SignError> {
     let mut next = it.next().ok_or_else(|| bad("signatureAlgorithm"))?;
     let mut signed_attrs = None;
     let (mut message_digest, mut content_type, mut signing_time, mut signing_certificate) = (None, None, None, false);
+    let mut policy = None;
     if next.tag == tag::ctx(0) {
         // Signed over the DER SET OF, i.e. the same contents with the universal SET tag.
         // (An indefinite-length encoding is re-encoded with a definite length.)
@@ -286,6 +289,10 @@ fn parse_signer(si: &Tlv<'_>) -> Result<SignerInfo, SignError> {
                 (CONTENT_TYPE, Some(v)) => content_type = Some(v.oid()?),
                 (SIGNING_TIME, Some(v)) => signing_time = v.time().ok(),
                 (SIGNING_CERT_V2 | SIGNING_CERT, _) => signing_certificate = true,
+                // SignaturePolicyId starts with the policy's OID (an implied policy is a NULL).
+                (crate::policy::SIG_POLICY_ID_ATTR, Some(v)) => {
+                    policy = v.children().ok().and_then(|c| c.first().and_then(|o| o.oid().ok()));
+                }
                 _ => {}
             }
         }
@@ -322,6 +329,7 @@ fn parse_signer(si: &Tlv<'_>) -> Result<SignerInfo, SignError> {
         signature,
         timestamp,
         timestamp_token,
+        policy,
     })
 }
 
@@ -371,7 +379,20 @@ pub fn sign_detached(
     alg: DigestAlg,
     content_digest: &[u8],
 ) -> Result<Vec<u8>, SignError> {
-    build(key, cert, chain, alg, DATA, None, content_digest)
+    build(key, cert, chain, alg, DATA, None, content_digest, None)
+}
+
+/// [`sign_detached`] under a signature policy: its signature-policy-identifier joins the signed
+/// attributes (CAdES-EPES, as ICP-Brasil's AD-RB requires).
+pub fn sign_detached_under(
+    key: &PrivateKey,
+    cert: &Certificate,
+    chain: &[Certificate],
+    alg: DigestAlg,
+    content_digest: &[u8],
+    policy: crate::policy::SignaturePolicy,
+) -> Result<Vec<u8>, SignError> {
+    build(key, cert, chain, alg, DATA, None, content_digest, Some(policy))
 }
 
 /// A CMS SignedData that encapsulates `content` under `content_type` (an RFC 3161 token wraps
@@ -384,7 +405,7 @@ pub fn sign_encapsulated(
     content_type: &str,
     content: &[u8],
 ) -> Result<Vec<u8>, SignError> {
-    build(key, cert, chain, alg, content_type, Some(content), &alg.digest(&[content]))
+    build(key, cert, chain, alg, content_type, Some(content), &alg.digest(&[content]), None)
 }
 
 // The parameters mirror the SignedData fields being assembled.
@@ -397,12 +418,16 @@ fn build(
     content_type: &str,
     content: Option<&[u8]>,
     content_digest: &[u8],
+    policy: Option<crate::policy::SignaturePolicy>,
 ) -> Result<Vec<u8>, SignError> {
     let cert_hash = DigestAlg::Sha256.digest(&[&cert.raw]);
     let general_names = der::seq(&[&der::explicit(4, &cert.issuer.raw)]);
     let ess = der::seq(&[&der::seq(&[&der::seq(&[&der::octets(&cert_hash), &der::seq(&[&general_names, &der::uint(&cert.serial)])])])]);
-    let attrs =
-        [attribute(CONTENT_TYPE, &der::oid(content_type)), attribute(MESSAGE_DIGEST, &der::octets(content_digest)), attribute(SIGNING_CERT_V2, &ess)];
+    let mut attrs =
+        vec![attribute(CONTENT_TYPE, &der::oid(content_type)), attribute(MESSAGE_DIGEST, &der::octets(content_digest)), attribute(SIGNING_CERT_V2, &ess)];
+    if let Some(p) = policy {
+        attrs.push(attribute(crate::policy::SIG_POLICY_ID_ATTR, &p.attribute_value()));
+    }
     let refs: Vec<&[u8]> = attrs.iter().map(Vec::as_slice).collect();
     let set = der::set_of(&refs);
     let signature = key.sign(alg, &set)?;
