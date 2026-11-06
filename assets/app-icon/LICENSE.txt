@@ -1,12 +1,11 @@
-PdfCraft app icon (pdfcraft.svg, pdfcraft-small.svg and every file derived from them in this
-directory: pdfcraft-1024.png, pdfcraft.icns, pdfcraft.ico, hicolor/).
+Ícone do UniPDF (todos os arquivos desta pasta, exceto pdfcraft-document.svg)
 
-Original artwork made for this project by the project owner, drawn in ArtCraft and vectorised for
-PdfCraft (no third-party material). Licensed like the rest of PdfCraft, under either of
+Marca da Uniphar Indústria Farmacêutica, criada por Denys Rodrigues de Oliveira. Todos os
+direitos reservados; não coberta pela licença MIT/Apache do código. Termos em
+docs/brand/LICENSE-brand.txt.
 
-  * Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
-  * MIT license (https://opensource.org/licenses/MIT)
+pdfcraft-document.svg adapta o ícone file-text do Lucide (ISC, assets/icons/LICENSE-lucide.txt).
 
-at your option.
-
-Regenerate the derived files with packaging/icons.sh.
+UniPDF app icon (every file in this directory except pdfcraft-document.svg): a Uniphar mark, all
+rights reserved, not covered by the MIT/Apache licence of the code. Terms:
+docs/brand/LICENSE-brand.txt.

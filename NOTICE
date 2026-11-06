@@ -1,11 +1,19 @@
+UniPDF
+Copyright (c) 2026 Denys Rodrigues de Oliveira - Uniphar Indústria Farmacêutica.
+UniPDF is a modified version of PdfCraft. Licensed under the MIT License or the Apache License,
+Version 2.0, at your option (LICENSE-MIT, LICENSE-APACHE).
+
+The Uni and Uniphar names, the app icon (assets/app-icon/, except the Lucide-based
+pdfcraft-document.svg), the opening animation's pictures (assets/splash/) and docs/brand/ belong
+to Uniphar Indústria Farmacêutica. They are NOT open source and are NOT covered by the MIT or
+Apache-2.0 license; their terms are in docs/brand/LICENSE-brand.txt, and modified versions must
+remove them.
+
+Original notice (kept as the MIT and Apache-2.0 licenses require):
+
 PdfCraft
 Copyright (c) 2026 ArtCraft Team and the PdfCraft contributors.
-Licensed under the MIT License or the Apache License, Version 2.0, at your option
-(LICENSE-MIT, LICENSE-APACHE).
-
-The ArtCraft name, wordmark and logos in docs/brand/ are trademarks of the ArtCraft Team. They are
-not open source and are not covered by the license above; their terms are in
-docs/brand/LICENSE-brand.txt.
+Licensed under the MIT License or the Apache License, Version 2.0, at your option.
 
 Third-party material
 

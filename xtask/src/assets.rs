@@ -41,6 +41,11 @@ pub const ALLOWED_LICENCES: &[&str] = &[
 /// (AGENTS.md §1.2).
 pub const BRAND_LICENCE: &str = "LicenseRef-Storyteller-Trademark";
 
+/// Uniphar's marks (the Uni and Uniphar names, UniPDF's icon, its opening animation and
+/// `docs/brand/`): shipped, all rights reserved, not licensed for reuse by forks
+/// (`docs/brand/LICENSE-brand.txt`). Allowed only under those folders.
+pub const UNIPHAR_MARKS: &str = "LicenseRef-Uniphar-Marks";
+
 pub const ADOBE_DATA_ALLOWED: &[(&str, &str)] = &[("hayro-cmap", "assets/cmaps.brotli"), ("hayro-interpret", "src/font/generated/metrics.rs")];
 
 /// First-party files on that same closed list: generated tables of Adobe-authored non-visual
@@ -241,7 +246,8 @@ pub fn check(root: &Path, m: &Manifest, repo_files: &[String], lock: &BTreeSet<(
         if !seen.insert(a.path.clone()) {
             problems.push(format!("{}: listed twice", a.path));
         }
-        let brand = a.licence == BRAND_LICENCE && a.kind == "logo" && a.path.starts_with("docs/brand/");
+        let brand = (a.licence == BRAND_LICENCE && a.kind == "logo" && a.path.starts_with("docs/brand/"))
+            || (a.licence == UNIPHAR_MARKS && ["docs/brand/", "assets/app-icon/", "assets/splash/"].iter().any(|d| a.path.starts_with(d)));
         if !brand {
             licence_ok(&a.path, &a.licence, &mut problems);
         }
