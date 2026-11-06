@@ -18,10 +18,14 @@
   pwsh packaging/windows/package.ps1 -Arch x64
   pwsh packaging/windows/package.ps1 -Arch x86 -SkipBuild
   pwsh packaging/windows/package.ps1 -Arch arm64     # cross-compiled; needs the MSVC ARM64 build tools
+  pwsh packaging/windows/package.ps1 -SkipModels     # no ocrs models: OCR uses Windows' own engine
 #>
 param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
-  [switch] $SkipBuild
+  [switch] $SkipBuild,
+  # Ship without the ocrs models (their download may be unavailable): on Windows, OCR uses the
+  # system's own engine first, and the models are only its fallback.
+  [switch] $SkipModels
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -101,11 +105,20 @@ Copy-Item (Join-Path $Root 'assets\app-icon\LICENSE-document.txt') $Stage
 # the MSI and the portable zip take the whole folder, so new models ship without naming them here.
 $Models = Join-Path $Stage 'models'
 New-Item -ItemType Directory -Force -Path $Models | Out-Null
-Push-Location $Root
-try { Invoke-Native 'cargo xtask models' { cargo xtask models $Models } } finally { Pop-Location }
-Remove-Item -Force (Join-Path $Models '*.part') -ErrorAction SilentlyContinue
-if (-not (Test-Path (Join-Path $Models 'ATTRIBUTION.txt')) -or -not (Get-ChildItem (Join-Path $Models '*.LICENCE.txt'))) {
-  throw "no OCR models in $Models after cargo xtask models"
+if ($SkipModels) {
+  Write-Warning 'shipping without the ocrs models: OCR uses Windows'' own engine'
+  Get-ChildItem $Models -Force | Remove-Item -Recurse -Force
+  Set-Content -Encoding utf8 (Join-Path $Models 'README.txt') @(
+    'UniPDF reads text in scanned pages with Windows'' own OCR (Windows.Media.Ocr).',
+    'Text recognition models placed in this folder are used only when Windows OCR is unavailable.'
+  )
+} else {
+  Push-Location $Root
+  try { Invoke-Native 'cargo xtask models' { cargo xtask models $Models } } finally { Pop-Location }
+  Remove-Item -Force (Join-Path $Models '*.part') -ErrorAction SilentlyContinue
+  if (-not (Test-Path (Join-Path $Models 'ATTRIBUTION.txt')) -or -not (Get-ChildItem (Join-Path $Models '*.LICENCE.txt'))) {
+    throw "no OCR models in $Models after cargo xtask models"
+  }
 }
 
 # ---- MSI ---------------------------------------------------------------------------------------
@@ -118,7 +131,8 @@ Invoke-Native 'wix build' {
 }
 # Inspect the built MSI, not just the XML, before signing/publishing it. In a child process, so
 # its Windows Installer database handle is gone before signtool opens the MSI.
-Invoke-Native 'test-msi' { & (Get-Process -Id $PID).Path -NoProfile -File (Join-Path $PSScriptRoot 'test-msi.ps1') $Msi }
+$testArgs = @($Msi) + $(if ($SkipModels) { @('-NoModels') } else { @() })
+Invoke-Native 'test-msi' { & (Get-Process -Id $PID).Path -NoProfile -File (Join-Path $PSScriptRoot 'test-msi.ps1') @testArgs }
 # wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
 Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
 & (Join-Path $PSScriptRoot 'sign.ps1') $Msi

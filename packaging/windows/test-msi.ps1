@@ -4,7 +4,8 @@
 .EXAMPLE
   pwsh packaging/windows/test-msi.ps1 dist/release/pdfcraft-0.2.1-windows-x64.msi
 #>
-param([Parameter(Mandatory)] [string] $Path)
+# -NoModels: the package was made with package.ps1 -SkipModels (OCR uses Windows' own engine).
+param([Parameter(Mandatory)] [string] $Path, [switch] $NoModels)
 $ErrorActionPreference = 'Stop'
 $Installer = New-Object -ComObject WindowsInstaller.Installer
 $Database = $Installer.OpenDatabase((Resolve-Path -LiteralPath $Path).Path, 0)
@@ -264,7 +265,7 @@ try {
   [void] $view.Execute()
   while ($record = $view.Fetch()) { if ($record.StringData(1) -match '\.rten$') { $modelFiles++ } }
 } finally { [void] $view.Close() }
-if ($modelFiles -lt 2) { throw "expected the OCR models (*.rten) in models\, found $modelFiles" }
+if (-not $NoModels -and $modelFiles -lt 2) { throw "expected the OCR models (*.rten) in models\, found $modelFiles" }
 $rm = Read-Row 'SELECT `Dialog` FROM `Dialog` WHERE `Dialog` = ''MsiRMFilesInUse''' 1
 Assert-Equal $rm[0] 'MsiRMFilesInUse' 'Files-in-use dialog'
 [void] [Runtime.InteropServices.Marshal]::FinalReleaseComObject($Database)

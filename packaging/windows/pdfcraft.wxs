@@ -61,7 +61,7 @@
          is removed. Releases from before a menu existed (the PDF one came in 0.7.1, the image one in
          0.4.0) never had the key, so updating from one of them counts as a first install; the
          OnlyDetect rows below tell them apart. A value given on the command line wins. -->
-    <Upgrade Id="EA00C367-7270-4C50-9D8B-A7A5C88AD27F">
+    <Upgrade Id="ACE80CB5-D8AC-4961-BAF9-FAF02EB3B495">
       <UpgradeVersion Minimum="0.7.1" IncludeMinimum="yes" OnlyDetect="yes" Property="PDFCONTEXTMENURELEASE" />
       <UpgradeVersion Minimum="0.4.0" IncludeMinimum="yes" OnlyDetect="yes" Property="IMAGECONTEXTMENURELEASE" />
     </Upgrade>
