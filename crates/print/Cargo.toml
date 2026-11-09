@@ -15,5 +15,10 @@ pdfcraft-content = { workspace = true }
 pdfcraft-model = { workspace = true }
 thiserror = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+# The Windows print path draws each page as a metafile through GDI (see spool.rs).
+pdfcraft-render = { workspace = true }
+pdfcraft-gdi = { workspace = true }
+
 [dev-dependencies]
 pdfcraft-render = { workspace = true }

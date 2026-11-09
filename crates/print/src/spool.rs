@@ -150,7 +150,43 @@ pub fn submit(pdf: &[u8], job: &Job) -> Result<String, crate::PrintError> {
 /// [`submit`], told `(sent, sheets)` as each sheet reaches the spooler (Windows; CUPS takes the
 /// whole PDF at once and reports nothing).
 pub fn submit_with_progress(pdf: &[u8], job: &Job, progress: &mut dyn FnMut(usize, usize)) -> Result<String, crate::PrintError> {
+    #[cfg(windows)]
+    if let Some(result) = gdi_submit(pdf, job, progress) {
+        return result;
+    }
     craft_print::submit_with_progress(pdf, job, progress).map_err(|e| crate::PrintError::Spool(e.to_string()))
+}
+
+/// Windows: every page drawn as a vector metafile and played through GDI, the way Adobe's print
+/// path sends a job. `None` when this path does not apply, and the spooler's own path (which
+/// draws the PDF through the system's PDF reader) prints the job instead: a shrink-to-fit job,
+/// or a page with something the metafile writer does not draw (shadings, soft masks, blend
+/// modes, dashed strokes, rotated images, stencil masks, Type 3 fonts).
+#[cfg(windows)]
+fn gdi_submit(pdf: &[u8], job: &Job, progress: &mut dyn FnMut(usize, usize)) -> Option<Result<String, crate::PrintError>> {
+    if job.scaling != Scaling::Exact {
+        return None;
+    }
+    let count = pdfcraft_render::emf::page_count(pdf).ok().filter(|&n| n > 0)?;
+    let mut sheets = Vec::with_capacity(count);
+    for index in 0..count {
+        let page = pdfcraft_render::emf::page_to_emf(pdf, index).ok()?;
+        sheets.push(pdfcraft_gdi::Sheet { emf: page.bytes, width_pt: page.width_pt, height_pt: page.height_pt });
+    }
+    let options = pdfcraft_gdi::Options {
+        printer: job.printer.clone(),
+        copies: job.copies,
+        collate: job.collate,
+        duplex: match job.duplex {
+            None => pdfcraft_gdi::Duplex::Printer,
+            Some(Duplex::Off) => pdfcraft_gdi::Duplex::Off,
+            Some(Duplex::LongEdge) => pdfcraft_gdi::Duplex::LongEdge,
+            Some(Duplex::ShortEdge) => pdfcraft_gdi::Duplex::ShortEdge,
+        },
+        grayscale: job.grayscale,
+        title: job.title.clone(),
+    };
+    Some(pdfcraft_gdi::print(&options, &sheets, progress).map_err(crate::PrintError::Spool))
 }
 
 pub fn open_printer_preferences(printer: &str) -> Result<(), crate::PrintError> {

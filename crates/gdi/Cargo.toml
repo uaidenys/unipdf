@@ -1,0 +1,18 @@
+[package]
+name = "pdfcraft-gdi"
+description = "Windows print path for PdfCraft: pages drawn as vector metafiles through GDI (the isolated unsafe FFI)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# This crate is the one place the workspace's `unsafe_code = "forbid"` does not apply: the GDI
+# printing calls are unsafe Win32 functions. It does not inherit the workspace lints, so the
+# exception stays here and nothing else in the workspace can use it.
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Printing",
+    "Win32_Storage_Xps",
+] }

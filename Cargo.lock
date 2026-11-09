@@ -4199,6 +4199,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pdfcraft-gdi"
+version = "1.0.0"
+dependencies = [
+ "windows",
+]
+
+[[package]]
 name = "pdfcraft-geom"
 version = "1.0.0"
 
@@ -4298,6 +4305,7 @@ dependencies = [
  "craft-print",
  "pdfcraft-content",
  "pdfcraft-cos",
+ "pdfcraft-gdi",
  "pdfcraft-model",
  "pdfcraft-render",
  "thiserror 2.0.21",
